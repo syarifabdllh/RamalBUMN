@@ -7,8 +7,8 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from datetime import date
 
 # ── Config ──────────────────────────────────────────────
-st.set_page_config(page_title="Forecast Saham Bank BUMN", layout="wide")
-st.title("📈 Forecasting Harga Saham Bank BUMN Indonesia")
+st.set_page_config(page_title="Forecast Saham Bank", layout="wide")
+st.title("📈 Forecasting Harga Saham Bank Indonesia")
 
 STOCKS = {
     "Bank BCA (BBCA)": "BBCA.JK",
