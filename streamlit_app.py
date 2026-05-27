@@ -55,8 +55,16 @@ if run:
             st.error("Data tidak ditemukan. Coba ticker lain.")
             st.stop()
 
+        # ── FIX: flatten MultiIndex columns & reset index ──
+        df_raw.columns = [
+            col[0] if isinstance(col, tuple) else col
+            for col in df_raw.columns
+        ]
         df_raw = df_raw.reset_index()
-        df_raw.columns = [c[0] if isinstance(c, tuple) else c for c in df_raw.columns]
+
+        # Rename kolom tanggal apapun namanya → "Date"
+        date_col = df_raw.columns[0]
+        df_raw = df_raw.rename(columns={date_col: "Date"})
         df_raw["Date"] = pd.to_datetime(df_raw["Date"])
 
         # ── Metrics ─────────────────────────────────────
