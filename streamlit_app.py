@@ -6,9 +6,11 @@ from prophet import Prophet
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from datetime import date
 
+
 # ── Config ──────────────────────────────────────────────
 st.set_page_config(page_title="Forecast Saham Bank", layout="wide")
 st.title("📈 Forecasting Harga Saham Bank Indonesia")
+
 
 STOCKS = {
     "Bank BCA (BBCA)": "BBCA.JK",
@@ -18,10 +20,11 @@ STOCKS = {
 
 # Tanggal IPO masing-masing saham
 IPO_DATES = {
-    "BBCA.JK": date(2000, 5, 31),   # IPO: 31 Mei 2000, harga IPO Rp 1.400
-    "BBRI.JK": date(2003, 11, 10),  # IPO: 10 November 2003, harga IPO Rp 875
-    "BMRI.JK": date(2003, 7, 14),   # IPO: 14 Juli 2003, harga IPO Rp 675
+    "BBCA.JK": date(2000, 5, 31),
+    "BBRI.JK": date(2003, 11, 10),
+    "BMRI.JK": date(2003, 7, 14),
 }
+
 
 # ── Sidebar / Controls ───────────────────────────────────
 with st.sidebar:
@@ -38,9 +41,9 @@ with st.sidebar:
         max_value=date.today(),
     )
     forecast_days = st.slider("Jumlah Hari Forecast", min_value=7, max_value=90, value=30)
-    price_target = st.radio("Target Harga Forecast", ["Close", "Open", "Keduanya"])
     model_choice = st.radio("Model", ["Prophet", "SARIMA", "Keduanya"])
     run = st.button("🚀 Jalankan Forecast", use_container_width=True)
+
 
 # ── Main ─────────────────────────────────────────────────
 if run:
@@ -83,62 +86,46 @@ if run:
             future_dates = pd.bdate_range(start=last_date, periods=periods + 1)[1:]
             return future_dates, sarima_fc
 
+        # ── Siapkan data Close saja ──────────────────────
+        df = df_raw[["Date", "Close"]].dropna().copy()
+        df.columns = ["ds", "y"]
+        df["ds"] = pd.to_datetime(df["ds"])
+
         # ── Chart ────────────────────────────────────────
-        price_modes = []
-        if price_target in ["Close", "Keduanya"]:
-            price_modes.append("Close")
-        if price_target in ["Open", "Keduanya"]:
-            price_modes.append("Open")
-
-        color_map = {
-            "Close": {"hist": "#3b82f6", "prophet": "#10b981", "sarima": "#f59e0b"},
-            "Open":  {"hist": "#a78bfa", "prophet": "#34d399", "sarima": "#fcd34d"},
-        }
-
         fig = go.Figure()
-        all_prophet_tbls = {}
-        all_sarima_tbls  = {}
 
-        for price_col in price_modes:
-            df = df_raw[["Date", price_col]].dropna().copy()
-            df.columns = ["ds", "y"]
-            df["ds"] = pd.to_datetime(df["ds"])
+        # Historical Close
+        fig.add_trace(go.Scatter(
+            x=df["ds"], y=df["y"],
+            name="Harga Historis (Close)",
+            line=dict(color="#3b82f6")
+        ))
 
-            # Historical
+        # Prophet
+        if model_choice in ["Prophet", "Keduanya"]:
+            fc = run_prophet(df, forecast_days)
             fig.add_trace(go.Scatter(
-                x=df["ds"], y=df["y"],
-                name=f"Historis {price_col}",
-                line=dict(color=color_map[price_col]["hist"])
+                x=fc["ds"], y=fc["yhat"],
+                name="Forecast Prophet",
+                line=dict(color="#10b981", dash="dash")
+            ))
+            fig.add_trace(go.Scatter(
+                x=pd.concat([fc["ds"], fc["ds"][::-1]]),
+                y=pd.concat([fc["yhat_upper"], fc["yhat_lower"][::-1]]),
+                fill="toself",
+                fillcolor="rgba(16,185,129,0.1)",
+                line=dict(color="rgba(255,255,255,0)"),
+                name="Confidence Prophet"
             ))
 
-            # Prophet
-            if model_choice in ["Prophet", "Keduanya"]:
-                fc = run_prophet(df, forecast_days)
-                fig.add_trace(go.Scatter(
-                    x=fc["ds"], y=fc["yhat"],
-                    name=f"Forecast Prophet ({price_col})",
-                    line=dict(color=color_map[price_col]["prophet"], dash="dash")
-                ))
-                fig.add_trace(go.Scatter(
-                    x=pd.concat([fc["ds"], fc["ds"][::-1]]),
-                    y=pd.concat([fc["yhat_upper"], fc["yhat_lower"][::-1]]),
-                    fill="toself",
-                    fillcolor="rgba(16,185,129,0.08)" if price_col == "Close" else "rgba(52,211,153,0.08)",
-                    line=dict(color="rgba(255,255,255,0)"),
-                    name=f"Confidence Prophet ({price_col})",
-                    showlegend=True
-                ))
-                all_prophet_tbls[price_col] = fc
-
-            # SARIMA
-            if model_choice in ["SARIMA", "Keduanya"]:
-                future_dates, sarima_fc = run_sarima(df["y"], forecast_days, df["ds"].iloc[-1])
-                fig.add_trace(go.Scatter(
-                    x=future_dates, y=sarima_fc,
-                    name=f"Forecast SARIMA ({price_col})",
-                    line=dict(color=color_map[price_col]["sarima"], dash="dash")
-                ))
-                all_sarima_tbls[price_col] = (future_dates, sarima_fc)
+        # SARIMA
+        if model_choice in ["SARIMA", "Keduanya"]:
+            future_dates, sarima_fc = run_sarima(df["y"], forecast_days, df["ds"].iloc[-1])
+            fig.add_trace(go.Scatter(
+                x=future_dates, y=sarima_fc,
+                name="Forecast SARIMA",
+                line=dict(color="#f59e0b", dash="dash")
+            ))
 
         fig.update_layout(
             title=f"Forecast Harga {selected_name} — {forecast_days} Hari ke Depan",
@@ -151,22 +138,19 @@ if run:
         st.plotly_chart(fig, use_container_width=True)
 
         # ── Tabel Hasil Forecast ─────────────────────────
-        for price_col in price_modes:
-            if model_choice in ["Prophet", "Keduanya"] and price_col in all_prophet_tbls:
-                st.subheader(f"📋 Tabel Forecast Prophet — {price_col}")
-                fc = all_prophet_tbls[price_col]
-                tbl = fc[["ds", "yhat", "yhat_lower", "yhat_upper"]].copy()
-                tbl.columns = ["Tanggal", "Prediksi", "Batas Bawah", "Batas Atas"]
-                tbl["Tanggal"] = tbl["Tanggal"].dt.strftime("%Y-%m-%d")
-                for col in ["Prediksi", "Batas Bawah", "Batas Atas"]:
-                    tbl[col] = tbl[col].apply(lambda x: f"Rp {x:,.0f}")
-                st.dataframe(tbl, use_container_width=True)
+        if model_choice in ["Prophet", "Keduanya"]:
+            st.subheader("📋 Tabel Forecast Prophet")
+            tbl = fc[["ds", "yhat", "yhat_lower", "yhat_upper"]].copy()
+            tbl.columns = ["Tanggal", "Prediksi", "Batas Bawah", "Batas Atas"]
+            tbl["Tanggal"] = tbl["Tanggal"].dt.strftime("%Y-%m-%d")
+            for col in ["Prediksi", "Batas Bawah", "Batas Atas"]:
+                tbl[col] = tbl[col].apply(lambda x: f"Rp {x:,.0f}")
+            st.dataframe(tbl, use_container_width=True)
 
-            if model_choice in ["SARIMA", "Keduanya"] and price_col in all_sarima_tbls:
-                st.subheader(f"📋 Tabel Forecast SARIMA — {price_col}")
-                future_dates, sarima_fc = all_sarima_tbls[price_col]
-                tbl_s = pd.DataFrame({
-                    "Tanggal": [d.strftime("%Y-%m-%d") for d in future_dates],
-                    "Prediksi": [f"Rp {v:,.0f}" for v in sarima_fc]
-                })
-                st.dataframe(tbl_s, use_container_width=True)
+        if model_choice in ["SARIMA", "Keduanya"]:
+            st.subheader("📋 Tabel Forecast SARIMA")
+            tbl_s = pd.DataFrame({
+                "Tanggal": [d.strftime("%Y-%m-%d") for d in future_dates],
+                "Prediksi": [f"Rp {v:,.0f}" for v in sarima_fc]
+            })
+            st.dataframe(tbl_s, use_container_width=True)
