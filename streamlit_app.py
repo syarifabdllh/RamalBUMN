@@ -304,50 +304,40 @@ def forecast_open_sarima(series: pd.Series, periods: int, last_date) -> pd.Serie
     return pd.Series(fc.values, index=future_dates)
 
 
-def run_prophet(df_close: pd.DataFrame, open_regressor: pd.Series, periods: int) -> pd.DataFrame:
+def run_prophet(df_close: pd.DataFrame, hist_open: pd.Series,
+                open_regressor: pd.Series, periods: int) -> pd.DataFrame:
     """
     Prophet forecast of Close price using forecasted Open as external regressor.
-    df_close: DataFrame with columns ['ds','y'] (historical Close)
-    open_regressor: Series of forecasted Open indexed by future business dates
+
+    Parameters
+    ----------
+    df_close       : DataFrame with columns ['ds', 'y'] — historical Close prices
+    hist_open      : Series indexed by Timestamp — historical Open prices (same dates as df_close)
+    open_regressor : Series indexed by Timestamp — forecasted Open prices (future dates)
+    periods        : int — number of business days to forecast
     """
-    # Historical open (aligned to close dates)
-    df_hist_open = df_close.copy()
-    df_hist_open["open_val"] = df_hist_open["ds"].map(
-        lambda d: df_close_with_open.loc[df_close_with_open["ds"] == d, "Open"].values[0]
-        if len(df_close_with_open.loc[df_close_with_open["ds"] == d]) > 0
-        else np.nan
-    )
-
-    m = Prophet(daily_seasonality=False, yearly_seasonality=True, weekly_seasonality=True)
-    m.add_regressor("open_val")
-
+    # Build training set: merge historical Open into df_close via date index
     train = df_close.copy()
+    # Normalize index of hist_open to date-only Timestamps for safe lookup
+    hist_open_map = {pd.Timestamp(k).normalize(): v for k, v in hist_open.items()}
     train["open_val"] = train["ds"].map(
-        lambda d: (
-            df_close_with_open.loc[df_close_with_open["ds"] == d, "Open"].values[0]
-            if len(df_close_with_open.loc[df_close_with_open["ds"] == d]) > 0
-            else np.nan
-        )
+        lambda d: hist_open_map.get(pd.Timestamp(d).normalize(), np.nan)
     )
     train = train.dropna(subset=["open_val"])
 
+    m = Prophet(daily_seasonality=False, yearly_seasonality=True, weekly_seasonality=True)
+    m.add_regressor("open_val")
     m.fit(train)
 
     future = m.make_future_dataframe(periods=periods, freq="B")
-    # Fill open_val: historical for past rows, forecasted for future rows
-    hist_open_map = dict(zip(df_close_with_open["ds"], df_close_with_open["Open"]))
-    future_open_map = open_regressor.to_dict()
 
-    def resolve_open(d):
-        if d in hist_open_map:
-            return hist_open_map[d]
-        if d in future_open_map:
-            return future_open_map[d]
-        # nearest fallback
-        return open_regressor.iloc[-1]
+    # Build unified open lookup: historical + forecasted
+    future_open_map = {pd.Timestamp(k).normalize(): v for k, v in open_regressor.items()}
+    combined_map = {**hist_open_map, **future_open_map}   # future overwrites if overlap
 
-    future["open_val"] = future["ds"].map(resolve_open)
-    future = future.dropna(subset=["open_val"])
+    future["open_val"] = future["ds"].map(
+        lambda d: combined_map.get(pd.Timestamp(d).normalize(), open_regressor.iloc[-1])
+    )
 
     fc = m.predict(future)
     return fc.tail(periods)
@@ -439,7 +429,11 @@ if run:
         sarima_fc    = None
 
         if model_choice in ["Prophet", "Keduanya"]:
-            prophet_fc = run_prophet(df_close, open_fc_prophet, forecast_days)
+            hist_open_series = pd.Series(
+                df_close_with_open["Open"].values,
+                index=pd.to_datetime(df_close_with_open["Date"]),
+            )
+            prophet_fc = run_prophet(df_close, hist_open_series, open_fc_prophet, forecast_days)
 
         if model_choice in ["SARIMA", "Keduanya"]:
             close_series_hist = pd.Series(
