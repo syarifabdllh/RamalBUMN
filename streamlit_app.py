@@ -8,62 +8,59 @@ from datetime import date
 import datetime
 
 # ── Config ──────────────────────────────────────────────
-st.set_page_config(page_title="Terminal | Stock Forecast", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Pro Forecast Terminal", layout="wide", initial_sidebar_state="expanded")
 
-# ── CSS Kustom: Bloomberg Terminal Aesthetic ─────────────
+# ── CSS Kustom: Modern Dark Financial Dashboard ─────────
 st.markdown("""
 <style>
-    /* Force Deep Black Background for entire app */
+    /* Force Deep Dark Background */
     [data-testid="stAppViewContainer"] {
-        background-color: #000000 !important;
-        color: #e0e0e0 !important;
+        background-color: #0B0E14 !important;
+        color: #D1D5DB !important;
     }
     [data-testid="stHeader"] {
-        background-color: #000000 !important;
+        background-color: #0B0E14 !important;
     }
     [data-testid="stSidebar"] {
-        background-color: #0a0a0a !important;
-        border-right: 1px solid #333333 !important;
+        background-color: #11151C !important;
+        border-right: 1px solid #1F2937 !important;
     }
     
-    /* Terminal Fonts */
+    /* Modern Clean Font */
     html, body, p, div, span, h1, h2, h3, h4, h5, h6, table, th, td {
-        font-family: 'Courier New', Courier, monospace !important;
+        font-family: 'Inter', 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif !important;
     }
 
     /* Titles & Sections */
-    .main-title { color: #ffb900; font-size: 24px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 5px; text-transform: uppercase; margin-bottom: 5px; }
-    .sub-title { color: #888888; font-size: 13px; margin-bottom: 25px; }
-    .section-title { color: #ffb900; font-size: 14px; font-weight: bold; background-color: #111; padding: 4px 8px; border-left: 4px solid #ffb900; margin-top: 2rem; margin-bottom: 1rem; text-transform: uppercase; }
-    .sidebar-section { font-size: 12px; font-weight: bold; color: #ffb900; margin-top: 1.5rem; border-bottom: 1px dotted #333; padding-bottom: 2px; margin-bottom: 8px; }
+    .main-title { color: #FFFFFF; font-size: 26px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .sub-title { color: #9CA3AF; font-size: 13px; margin-bottom: 24px; font-weight: 400; }
+    .section-title { color: #F3F4F6; font-size: 13px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid #374151; margin-top: 2rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+    .sidebar-section { font-size: 11px; font-weight: 600; color: #6B7280; margin-top: 1.5rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     
-    /* Terminal Metric Cards */
-    .metric-card { background-color: #050505; border: 1px solid #333333; padding: 12px; text-align: left; }
-    .metric-label { font-size: 11px; color: #888888; text-transform: uppercase; }
-    .metric-value { font-size: 18px; font-weight: bold; color: #00ff00; margin-top: 4px; }
-    .metric-value-cyan { font-size: 18px; font-weight: bold; color: #00ffff; margin-top: 4px; }
-    .metric-sub { font-size: 11px; color: #666666; margin-top: 2px; }
+    /* Metric Cards */
+    .metric-card { background-color: #151A22; border: 1px solid #1F2937; border-radius: 6px; padding: 16px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .metric-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+    .metric-value { font-size: 22px; font-weight: 700; color: #FFFFFF; margin-top: 6px; margin-bottom: 2px; }
+    .metric-value-highlight { font-size: 22px; font-weight: 700; color: #3B82F6; margin-top: 6px; margin-bottom: 2px; }
+    .metric-sub { font-size: 12px; color: #6B7280; font-weight: 400; }
     
-    /* Terminal Signal Cards */
-    .signal-card { background-color: #050505; border: 1px solid #333333; padding: 12px; }
-    .badge-buy { color: #00ff00; border: 1px solid #00ff00; padding: 3px 10px; font-weight: bold; font-size: 14px; display: inline-block; background-color: rgba(0,255,0,0.1); }
-    .badge-sell { color: #ff0000; border: 1px solid #ff0000; padding: 3px 10px; font-weight: bold; font-size: 14px; display: inline-block; background-color: rgba(255,0,0,0.1); }
-    .badge-hold { color: #ffb900; border: 1px solid #ffb900; padding: 3px 10px; font-weight: bold; font-size: 14px; display: inline-block; background-color: rgba(255,185,0,0.1); }
+    /* Signal Cards */
+    .signal-card { background-color: #151A22; border: 1px solid #1F2937; border-radius: 6px; padding: 16px; }
+    .badge-buy { color: #10B981; background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 13px; display: inline-block; }
+    .badge-sell { color: #EF4444; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 13px; display: inline-block; }
+    .badge-hold { color: #F59E0B; background-color: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 13px; display: inline-block; }
     
-    /* Terminal Tables */
-    .terminal-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; background-color: #000000; color: #e0e0e0; }
-    .terminal-table th { background-color: #111111; color: #ffb900; padding: 8px; text-align: left; border-bottom: 1px solid #ffb900; text-transform: uppercase; }
-    .terminal-table td { padding: 8px; border-bottom: 1px dotted #333333; }
-    .terminal-table tr:hover { background-color: #0a0a0a; }
+    /* Tables */
+    .pro-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background-color: #0B0E14; color: #D1D5DB; }
+    .pro-table th { background-color: #151A22; color: #9CA3AF; padding: 10px 12px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid #374151; border-top: 1px solid #374151; }
+    .pro-table td { padding: 10px 12px; border-bottom: 1px solid #1F2937; }
+    .pro-table tr:hover { background-color: #11151C; }
     
     /* Buttons */
-    div.stButton > button:first-child { background-color: #000000; color: #ffb900; border: 1px solid #ffb900; font-weight: bold; padding: 0.5rem 1rem; text-transform: uppercase; }
-    div.stButton > button:first-child:hover { background-color: #ffb900; color: #000000; }
+    div.stButton > button:first-child { background-color: #2563EB; color: #FFFFFF; border: none; border-radius: 6px; font-weight: 600; padding: 0.5rem 1rem; transition: all 0.2s; }
+    div.stButton > button:first-child:hover { background-color: #1D4ED8; }
     
-    /* Warning Box */
-    .terminal-warning { border: 1px solid #ffb900; background-color: rgba(255,185,0,0.05); color: #ffb900; padding: 10px; font-size: 12px; margin-top: 15px; }
-    
-    /* Hide Streamlit elements that break dark mode */
+    /* Hide specific elements */
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -74,54 +71,38 @@ STOCKS = {
     "Bank BRI (BBRI)": "BBRI.JK",
     "Bank Mandiri (BMRI)": "BMRI.JK",
 }
-IPO_DATES = {
-    "BBCA.JK": date(2000, 5, 31),
-    "BBRI.JK": date(2003, 11, 10),
-    "BMRI.JK": date(2003, 7, 14),
-}
 
 # ── Sidebar / Controls ───────────────────────────────────
 with st.sidebar:
-    st.markdown("<h2 style='color:#ffb900; margin-bottom: 0; border-bottom: 1px solid #ffb900; padding-bottom: 10px;'>CMD > FORECAST</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#FFFFFF; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.5px;'>Pro Forecast</h2>", unsafe_allow_html=True)
     
-    st.markdown("<div class='sidebar-section'>> INSTRUMENT</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-section'>INSTRUMENT</div>", unsafe_allow_html=True)
     selected_name = st.selectbox("TICKER", list(STOCKS.keys()), label_visibility="collapsed")
     ticker = STOCKS[selected_name]
-    ipo_date = IPO_DATES[ticker]
     
-    st.markdown("<div class='sidebar-section'>> DATE RANGE</div>", unsafe_allow_html=True)
-    default_start = max(ipo_date, date.today() - datetime.timedelta(days=365*3))
-    start_date = st.date_input(
-        "START DATE",
-        value=default_start,
-        min_value=ipo_date,
-        max_value=date.today(),
-        label_visibility="collapsed"
-    )
-    
-    st.markdown("<div class='sidebar-section'>> HORIZON (DAYS)</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-section'>FORECAST HORIZON</div>", unsafe_allow_html=True)
     forecast_days = st.slider(f"Horizon", min_value=7, max_value=90, value=30, label_visibility="collapsed")
     
-    st.markdown("<div class='sidebar-section'>> MODEL ENGINE</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-section'>MODEL ENGINE</div>", unsafe_allow_html=True)
     model_choice = st.radio("MODEL", ["Prophet", "SARIMA", "Keduanya"], label_visibility="collapsed")
     
     st.markdown("<br>", unsafe_allow_html=True)
-    run = st.button("EXECUTE RUN", use_container_width=True)
+    run = st.button("Run Analysis", use_container_width=True)
 
 # ── Helper Functions ─────────────────────────────────────
 def get_signal_info(forecast_val, last_close, threshold=1.0):
     pct_change = ((forecast_val - last_close) / last_close) * 100
     if pct_change > threshold:
-        return "▲ BUY", "badge-buy", pct_change, "#00ff00"
+        return "BUY", "badge-buy", pct_change, "#10B981"
     elif pct_change < -threshold:
-        return "▼ SELL", "badge-sell", pct_change, "#ff0000"
+        return "SELL", "badge-sell", pct_change, "#EF4444"
     else:
-        return "— HOLD", "badge-hold", pct_change, "#ffb900"
+        return "HOLD", "badge-hold", pct_change, "#F59E0B"
 
 def format_signal_html(val):
-    if "BUY" in str(val): return f"<span style='color:#00ff00; font-weight:bold;'>{val}</span>"
-    if "SELL" in str(val): return f"<span style='color:#ff0000; font-weight:bold;'>{val}</span>"
-    if "HOLD" in str(val): return f"<span style='color:#ffb900; font-weight:bold;'>{val}</span>"
+    if "BUY" in str(val): return f"<span style='color:#10B981; font-weight:600;'>▲ BUY</span>"
+    if "SELL" in str(val): return f"<span style='color:#EF4444; font-weight:600;'>▼ SELL</span>"
+    if "HOLD" in str(val): return f"<span style='color:#F59E0B; font-weight:600;'>— HOLD</span>"
     return val
 
 def run_prophet(series_df, periods):
@@ -140,11 +121,11 @@ def run_sarima(series, periods, last_date):
 
 # ── Main Content ─────────────────────────────────────────
 if run:
-    with st.spinner("FETCHING DATA & EXECUTING MODEL..."):
-        # 1. Ambil Data
-        df_raw = yf.download(ticker, start=str(start_date), end=str(date.today()), auto_adjust=True)
+    with st.spinner("Fetching data & running quantitative models..."):
+        # 1. Ambil Data (Hardcoded dari awal 2019)
+        df_raw = yf.download(ticker, start="2019-01-01", end=str(date.today()), auto_adjust=True)
         if df_raw.empty:
-            st.error("ERR: DATA NOT FOUND.")
+            st.error("Data tidak ditemukan.")
             st.stop()
 
         df_raw.columns = [col[0] if isinstance(col, tuple) else col for col in df_raw.columns]
@@ -158,17 +139,16 @@ if run:
         data_points = len(df_raw)
 
         # 2. Header Dashboard
-        st.markdown(f"<div class='main-title'>EQUITY FORECAST TERMINAL: {ticker}</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='sub-title'>SYSTEM: {model_choice.upper()} | HORIZON: {forecast_days} DAYS | STATUS: ONLINE</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='main-title'>{selected_name} Overview</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='sub-title'>Data since 2019-01-01 • Mode: {model_choice} • Projection: {forecast_days} Days</div>", unsafe_allow_html=True)
 
         # 3. Baris Metrik Atas 
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4 = st.columns(4)
         metrics = [
-            (c1, "TICKER", selected_name.split(' (')[0], f"IDX:{ticker.split('.')[0]}", "metric-value-cyan"),
-            (c2, "LAST CLOSE", f"Rp {last_close:,.0f}", f"As of {df_raw['Date'].iloc[-1].strftime('%d-%b-%y')}", "metric-value"),
-            (c3, "LAST OPEN", f"Rp {last_open:,.0f}", "IDR", "metric-value"),
-            (c4, "VOLATILITY DATA", f"{data_points:,}", "Trading Days", "metric-value-cyan"),
-            (c5, "FORECAST TARGET", f"+{forecast_days} D", "Forward Looking", "metric-value")
+            (c1, "TICKER / EXCHANGE", ticker.split('.')[0], "IDX", "metric-value-highlight"),
+            (c2, "LAST CLOSE PRICE", f"Rp {last_close:,.0f}", f"As of {df_raw['Date'].iloc[-1].strftime('%d %b %Y')}", "metric-value"),
+            (c3, "LAST OPEN PRICE", f"Rp {last_open:,.0f}", "IDR", "metric-value"),
+            (c4, "TOTAL TRADING DAYS", f"{data_points:,}", "Since 2019", "metric-value")
         ]
         
         for col, label, val, sub, val_class in metrics:
@@ -207,11 +187,11 @@ if run:
             sig_text_p, badge_class_p, pct_p, col_p = get_signal_info(h1_val_p, last_close)
             sig_c1.markdown(f"""
             <div class='signal-card'>
-                <div class='metric-label' style='margin-bottom:10px;'>ENGINE: PROPHET</div>
+                <div class='metric-label' style='margin-bottom:12px;'>PROPHET ENGINE</div>
                 <div class='{badge_class_p}'>{sig_text_p}</div>
-                <div style='margin-top:10px; font-size:13px; color:#e0e0e0;'>
-                    TARGET T+1 : <span style='color:{col_p}; font-weight:bold;'>Rp {h1_val_p:,.0f}</span><br>
-                    VARIANCE   : <span style='color:{col_p};'>{"+" if pct_p>0 else ""}{pct_p:.2f}%</span>
+                <div style='margin-top:12px; font-size:13px; color:#D1D5DB;'>
+                    Target (T+1): <span style='font-weight:600; color:#FFFFFF;'>Rp {h1_val_p:,.0f}</span> 
+                    <span style='color:{col_p}; margin-left:8px;'>{"+" if pct_p>0 else ""}{pct_p:.2f}%</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -221,87 +201,85 @@ if run:
             sig_text_s, badge_class_s, pct_s, col_s = get_signal_info(h1_val_s, last_close)
             sig_c2.markdown(f"""
             <div class='signal-card'>
-                <div class='metric-label' style='margin-bottom:10px;'>ENGINE: SARIMA</div>
+                <div class='metric-label' style='margin-bottom:12px;'>SARIMA ENGINE</div>
                 <div class='{badge_class_s}'>{sig_text_s}</div>
-                <div style='margin-top:10px; font-size:13px; color:#e0e0e0;'>
-                    TARGET T+1 : <span style='color:{col_s}; font-weight:bold;'>Rp {h1_val_s:,.0f}</span><br>
-                    VARIANCE   : <span style='color:{col_s};'>{"+" if pct_s>0 else ""}{pct_s:.2f}%</span>
+                <div style='margin-top:12px; font-size:13px; color:#D1D5DB;'>
+                    Target (T+1): <span style='font-weight:600; color:#FFFFFF;'>Rp {h1_val_s:,.0f}</span> 
+                    <span style='color:{col_s}; margin-left:8px;'>{"+" if pct_s>0 else ""}{pct_s:.2f}%</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            
-        st.markdown("<div class='terminal-warning'>SYS_MSG: Signals generated via (T+1 Forecast / Last Close) with ±1.0% threshold. Not financial advice.</div>", unsafe_allow_html=True)
 
         # 5. Chart
-        st.markdown("<div class='section-title'>PRICE CHART TERMINAL</div>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>PRICE & PROJECTION CHART</div>", unsafe_allow_html=True)
         fig = go.Figure()
         
-        # Plot Histori (Warna Neon Cyan/Abu)
-        fig.add_trace(go.Scatter(x=df_close["ds"], y=df_close["y"], name="HIST CLOSE", line=dict(color="#00ffff", width=2)))
-        fig.add_trace(go.Scatter(x=df_open["ds"], y=df_open["y"], name="HIST OPEN", line=dict(color="#777777", dash="dot", width=1)))
+        # Plot Histori 
+        fig.add_trace(go.Scatter(x=df_close["ds"], y=df_close["y"], name="Historical Close", line=dict(color="#3B82F6", width=2)))
+        fig.add_trace(go.Scatter(x=df_open["ds"], y=df_open["y"], name="Historical Open", line=dict(color="#6B7280", dash="dot", width=1.5)))
 
-        # Plot Forecast Prophet (Warna Neon Hijau)
+        # Plot Forecast Prophet 
         if fc_prophet_close is not None:
-            fig.add_trace(go.Scatter(x=fc_prophet_close["ds"], y=fc_prophet_close["yhat"], name="FCST PROPHET", line=dict(color="#00ff00", dash="dash", width=2)))
+            fig.add_trace(go.Scatter(x=fc_prophet_close["ds"], y=fc_prophet_close["yhat"], name="Forecast Prophet", line=dict(color="#10B981", dash="dash", width=2.5)))
             fig.add_trace(go.Scatter(
                 x=pd.concat([fc_prophet_close["ds"], fc_prophet_close["ds"][::-1]]),
                 y=pd.concat([fc_prophet_close["yhat_upper"], fc_prophet_close["yhat_lower"][::-1]]),
-                fill="toself", fillcolor="rgba(0,255,0,0.1)", line=dict(color="rgba(255,255,255,0)"),
-                name="CONFIDENCE", showlegend=False
+                fill="toself", fillcolor="rgba(16, 185, 129, 0.1)", line=dict(color="rgba(255,255,255,0)"),
+                name="Prophet Confidence", showlegend=False
             ))
             
-        # Plot Forecast SARIMA (Warna Amber/Oranye)
+        # Plot Forecast SARIMA
         if sarima_fc_close is not None:
-            fig.add_trace(go.Scatter(x=future_dates_sarima, y=sarima_fc_close, name="FCST SARIMA", line=dict(color="#ffb900", dash="dash", width=2)))
+            fig.add_trace(go.Scatter(x=future_dates_sarima, y=sarima_fc_close, name="Forecast SARIMA", line=dict(color="#F59E0B", dash="dash", width=2.5)))
 
         fig.update_layout(
             template="plotly_dark",
-            plot_bgcolor="#000000",
-            paper_bgcolor="#000000",
-            font=dict(family="Courier New, monospace", color="#e0e0e0", size=11),
+            plot_bgcolor="#0B0E14",
+            paper_bgcolor="#0B0E14",
+            font=dict(family="Inter, sans-serif", color="#9CA3AF", size=12),
             height=450,
-            margin=dict(l=10, r=10, t=10, b=10),
+            margin=dict(l=0, r=0, t=10, b=0),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-            xaxis=dict(showgrid=True, gridcolor="#222222", zerolinecolor="#333"),
-            yaxis=dict(showgrid=True, gridcolor="#222222", zerolinecolor="#333", tickprefix="Rp ", side="right")
+            xaxis=dict(showgrid=True, gridcolor="#1F2937", zerolinecolor="#1F2937"),
+            yaxis=dict(showgrid=True, gridcolor="#1F2937", zerolinecolor="#1F2937", tickprefix="Rp ", side="right")
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 6. Tabel Hasil (HTML Murni agar 100% Dark Mode & Bebas Override Streamlit)
-        st.markdown("<div class='section-title'>DATA MATRIX (FORWARD LOOKING)</div>", unsafe_allow_html=True)
+        # 6. Tabel Hasil (HTML Murni)
+        st.markdown("<div class='section-title'>PROJECTION MATRIX</div>", unsafe_allow_html=True)
         
         if fc_prophet_close is not None:
-            st.markdown("<div style='color:#00ff00; font-weight:bold; margin-bottom:5px;'>[ PROPHET ENGINE ]</div>", unsafe_allow_html=True)
+            st.markdown("<div style='color:#FFFFFF; font-weight:600; font-size:14px; margin-bottom:10px;'>Prophet Projections</div>", unsafe_allow_html=True)
             tbl = pd.DataFrame({
-                "TANGGAL": fc_prophet_close["ds"].dt.strftime("%d-%b-%Y"),
-                "FORECAST OPEN": fc_prophet_open["yhat"].values,
-                "FORECAST CLOSE": fc_prophet_close["yhat"].values,
-                "LOWER BOUND": fc_prophet_close["yhat_lower"].values
+                "Date": fc_prophet_close["ds"].dt.strftime("%Y-%m-%d"),
+                "Forecast Open": fc_prophet_open["yhat"].values,
+                "Forecast Close": fc_prophet_close["yhat"].values,
+                "Lower Bound": fc_prophet_close["yhat_lower"].values
             })
             
             signals = []
             prev_val = last_close
-            for val in tbl["FORECAST CLOSE"]:
+            for val in tbl["Forecast Close"]:
                 sig, _, _, _ = get_signal_info(val, prev_val)
                 signals.append(sig)
                 prev_val = val
                 
-            tbl["SIGNAL"] = signals
+            tbl["Signal"] = signals
             
-            for col in ["FORECAST OPEN", "FORECAST CLOSE", "LOWER BOUND"]:
+            for col in ["Forecast Open", "Forecast Close", "Lower Bound"]:
                 tbl[col] = tbl[col].apply(lambda x: f"Rp {x:,.0f}")
                 
-            tbl["SIGNAL"] = tbl["SIGNAL"].apply(format_signal_html)
-            html_table = tbl.to_html(index=False, classes="terminal-table", escape=False)
+            tbl["Signal"] = tbl["Signal"].apply(format_signal_html)
+            html_table = tbl.to_html(index=False, classes="pro-table", escape=False)
             st.markdown(html_table, unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
 
         if sarima_fc_close is not None:
-            st.markdown("<div style='color:#ffb900; font-weight:bold; margin-bottom:5px;'>[ SARIMA ENGINE ]</div>", unsafe_allow_html=True)
+            st.markdown("<div style='color:#FFFFFF; font-weight:600; font-size:14px; margin-bottom:10px;'>SARIMA Projections</div>", unsafe_allow_html=True)
             tbl_s = pd.DataFrame({
-                "TANGGAL": [d.strftime("%d-%b-%Y") for d in future_dates_sarima],
-                "FORECAST OPEN": [f"Rp {v:,.0f}" for v in sarima_fc_open],
-                "FORECAST CLOSE": [f"Rp {v:,.0f}" for v in sarima_fc_close]
+                "Date": [d.strftime("%Y-%m-%d") for d in future_dates_sarima],
+                "Forecast Open": [f"Rp {v:,.0f}" for v in sarima_fc_open],
+                "Forecast Close": [f"Rp {v:,.0f}" for v in sarima_fc_close]
             })
             
             signals_s = []
@@ -311,11 +289,8 @@ if run:
                 signals_s.append(sig)
                 prev_val_s = val
                 
-            tbl_s["SIGNAL"] = signals_s
-            tbl_s["SIGNAL"] = tbl_s["SIGNAL"].apply(format_signal_html)
+            tbl_s["Signal"] = signals_s
+            tbl_s["Signal"] = tbl_s["Signal"].apply(format_signal_html)
             
-            html_table_s = tbl_s.to_html(index=False, classes="terminal-table", escape=False)
+            html_table_s = tbl_s.to_html(index=False, classes="pro-table", escape=False)
             st.markdown(html_table_s, unsafe_allow_html=True)
-
-        # Footer Terminal
-        st.markdown(f"<div style='margin-top:40px; font-size:10px; color:#555555; text-align:right;'>DATA SOURCE: YAHOO FINANCE API | SYS_TIME: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')} | END OF REPORT</div>", unsafe_allow_html=True)
