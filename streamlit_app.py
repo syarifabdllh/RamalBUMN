@@ -74,7 +74,7 @@ STOCKS = {
 
 # ── Sidebar / Controls ───────────────────────────────────
 with st.sidebar:
-    st.markdown("<h2 style='color:#FFFFFF; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.5px;'>Pro Forecast</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#FFFFFF; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.5px;'>Banking Forecast</h2>", unsafe_allow_html=True)
     
     st.markdown("<div class='sidebar-section'>INSTRUMENT</div>", unsafe_allow_html=True)
     selected_name = st.selectbox("TICKER", list(STOCKS.keys()), label_visibility="collapsed")
