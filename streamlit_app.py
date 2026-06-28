@@ -13,44 +13,37 @@ warnings.filterwarnings("ignore")
 # ── Config ──────────────────────────────────────────────
 st.set_page_config(page_title="Stock Forecast", layout="wide")
 
-# CSS Kustom (HARDENED LIGHT THEME)
-# Menambahkan !important agar kebal dari bocoran Dark Mode bawaan Streamlit
+# CSS Kustom (Hanya untuk mewarnai Tombol, Tabel, dan Card. Tidak merusak Input Box)
 st.markdown("""<style>
-/* Memaksa background terang dan teks gelap */
-.stApp { background-color: #F8FAFC !important; color: #0F172A !important; font-family: 'Inter', sans-serif; }
 #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 
-/* Memaksa warna input box dan dropdown agar tetap terang */
-.stSelectbox div[data-baseweb="select"] > div, .stDateInput div[data-baseweb="input"] > div, .stNumberInput div[data-baseweb="input"] > div {
-    background-color: #FFFFFF !important; color: #0F172A !important; border: 1px solid #CBD5E1 !important;
-}
+/* Typografi Judul */
+.main-title { color: #0F172A; font-size: 28px; font-weight: 700; margin-bottom: 0px; }
+.sub-title { color: #64748B; font-size: 14px; margin-bottom: 20px; }
+.section-title { font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 1px; margin-top: 35px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #E2E8F0; padding-bottom: 5px;}
 
-/* Typography & Titles */
-.main-title { color: #0F172A !important; font-size: 28px; font-weight: 700; margin-bottom: 0px; }
-.sub-title { color: #64748B !important; font-size: 14px; margin-bottom: 20px; }
-.section-title { font-size: 13px; font-weight: 700; color: #475569 !important; letter-spacing: 1px; margin-top: 35px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #E2E8F0; padding-bottom: 5px;}
+/* Custom Tombol Biru Elegan */
+.stButton>button { background-color: #10437A !important; color: white !important; border-radius: 6px !important; padding: 15px !important; font-weight: 600 !important; border: none !important; }
+.stButton>button:hover { background-color: #0c335d !important; color: white !important; }
 
-/* KPI Cards */
+/* Desain Card & Tabel Kustom (Dipaksa Putih & Tulisan Gelap agar selalu mirip Mockup) */
 .kpi-container { display: flex; gap: 15px; margin-bottom: 25px; margin-top: 10px; }
-.kpi-card { background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 8px; padding: 16px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.kpi-title { font-size: 11px; color: #64748B !important; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
-.kpi-value { font-size: 22px; font-weight: 800; color: #0F172A !important; }
-.kpi-sub { font-size: 12px; color: #64748B !important; margin-top: 4px; }
+.kpi-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.kpi-title { font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+.kpi-value { font-size: 22px; font-weight: 800; color: #0F172A; }
+.kpi-sub { font-size: 12px; color: #64748B; margin-top: 4px; }
 
-/* Signal Cards & Badges */
-.signal-card { background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 8px; padding: 16px; width: 32%; display: inline-block; margin-right: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.signal-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; width: 32%; display: inline-block; margin-right: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 700; font-size: 14px; margin-top: 5px; margin-bottom: 10px; }
-.badge-buy { background-color: #D1FAE5 !important; color: #059669 !important; border: 1px solid #A7F3D0 !important; }
-.badge-sell { background-color: #FEE2E2 !important; color: #DC2626 !important; border: 1px solid #FECACA !important; }
-.badge-hold { background-color: #FEF3C7 !important; color: #D97706 !important; border: 1px solid #FDE68A !important; }
+.badge-buy { background-color: #D1FAE5; color: #059669; border: 1px solid #A7F3D0; }
+.badge-sell { background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+.badge-hold { background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
 
-/* Tables */
-.custom-table { width: 100%; border-collapse: collapse; background-color: #FFFFFF !important; font-size: 13px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0;}
-.custom-table th { background-color: #F8FAFC !important; color: #475569 !important; font-weight: 700; text-align: left; padding: 12px 16px; border-bottom: 1px solid #E2E8F0 !important; }
-.custom-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0 !important; color: #1E293B !important; }
+.custom-table { width: 100%; border-collapse: collapse; background-color: #FFFFFF; font-size: 13px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0;}
+.custom-table th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-align: left; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; }
+.custom-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #1E293B; }
 
-/* Disclaimer Box */
-.disclaimer { background-color: #FFFBEB !important; border: 1px solid #FDE68A !important; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #B45309 !important; margin-bottom: 25px; margin-top: 15px; }
+.disclaimer { background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #B45309; margin-bottom: 25px; margin-top: 15px; }
 </style>""", unsafe_allow_html=True)
 
 # ── Data Presets ──────────────────────────────────────────────
@@ -96,23 +89,26 @@ def run_fast_sarima(series, periods, last_date):
     dates = pd.bdate_range(start=last_date, periods=periods + 1)[1:]
     return dates, fc
 
-# ── Header ─────────────────────────────────────────
+# ── Tampilan Utama ─────────────────────────────────────────
 st.markdown("<div class='main-title'>Forecasting Harga Saham Bank Indonesia</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>Dashboard analisis prediktif pergerakan harga saham menggunakan metode runtun waktu.</div>", unsafe_allow_html=True)
 
-# ── Form Input (Rapi menggunakan st.columns) ──
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    selected_name = st.selectbox("Instrumen Saham", list(STOCKS.keys()))
-    ticker = STOCKS[selected_name]
-with col2:
-    start_date = st.date_input("Tanggal Mulai", value=IPO_DATES[ticker], min_value=IPO_DATES[ticker], max_value=date.today())
-with col3:
-    forecast_days = st.number_input("Horizon Forecast (Hari)", min_value=7, max_value=90, value=30)
-with col4:
-    model_choice = st.selectbox("Algoritma", ["Prophet", "SARIMA", "Keduanya"])
+# MENGGUNAKAN NATIVE CONTAINER STREAMLIT AGAR INPUTAN RAPI & TIDAK ERROR
+with st.container(border=True):
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        selected_name = st.selectbox("Instrumen Saham", list(STOCKS.keys()))
+        ticker = STOCKS[selected_name]
+    with col2:
+        start_date = st.date_input("Tanggal Mulai", value=IPO_DATES[ticker], min_value=IPO_DATES[ticker], max_value=date.today())
+    with col3:
+        forecast_days = st.number_input("Horizon Forecast (Hari)", min_value=7, max_value=90, value=30)
+    with col4:
+        model_choice = st.selectbox("Algoritma", ["Prophet", "SARIMA", "Keduanya"])
 
-run = st.button("🚀 Jalankan Forecast", type="primary", use_container_width=True)
+    # Tombol Biru 
+    run = st.button("🚀 Jalankan Forecast", use_container_width=True)
+
 st.markdown("<hr style='border: 1px solid #E2E8F0; margin-top: 15px;'>", unsafe_allow_html=True)
 
 # ── PROSES & HASIL ──
@@ -171,7 +167,7 @@ if run:
         # ── BAGIAN PROPHET ──
         # =====================================================================
         if model_choice in ["Prophet", "Keduanya"]:
-            st.markdown("<div class='section-title' style='color:#059669 !important; border-bottom-color:#34D399;'>📈 HASIL FORECAST — MODEL PROPHET</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title' style='color:#059669; border-bottom-color:#34D399;'>📈 HASIL FORECAST — MODEL PROPHET</div>", unsafe_allow_html=True)
             
             fig_p = go.Figure()
             fig_p.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Close"], name="Historical Close", line=dict(color="#1E3A8A", width=2)))
@@ -184,7 +180,6 @@ if run:
                 showlegend=False, name="Confidence Prophet"
             ))
             
-            # THEME=NONE ADALAH KUNCI AGAR CHART TIDAK JADI HITAM KELAM!
             fig_p.update_layout(
                 paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", height=350, margin=dict(l=0, r=0, t=10, b=0), 
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(color="#475569")), 
@@ -193,7 +188,6 @@ if run:
             )
             st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False}, theme=None)
 
-            # Tabel
             table_html_p = '<table class="custom-table"><tr><th>TANGGAL</th><th>FORECAST OPEN</th><th>FORECAST CLOSE</th><th>BATAS BAWAH</th><th>SIGNAL</th></tr>'
             for i in range(min(5, forecast_days)): 
                 tgl = fc_close_prophet.iloc[i]["ds"].strftime("%Y-%m-%d")
@@ -211,14 +205,13 @@ if run:
         # ── BAGIAN SARIMA ──
         # =====================================================================
         if model_choice in ["SARIMA", "Keduanya"]:
-            st.markdown("<div class='section-title' style='color:#DC2626 !important; border-bottom-color:#F87171;'>📈 HASIL FORECAST — MODEL SARIMA</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title' style='color:#DC2626; border-bottom-color:#F87171;'>📈 HASIL FORECAST — MODEL SARIMA</div>", unsafe_allow_html=True)
             
             fig_s = go.Figure()
             fig_s.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Close"], name="Historical Close", line=dict(color="#1E3A8A", width=2)))
             fig_s.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Open"], name="Historical Open", line=dict(color="#94A3B8", width=1.5, dash="dash")))
             fig_s.add_trace(go.Scatter(x=dates_s, y=fc_close_sarima, name="Forecast Close (SARIMA)", line=dict(color="#EF4444", width=2.5, dash="dash")))
             
-            # MATIKAN THEME OVERRIDE DI SINI JUGA
             fig_s.update_layout(
                 paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", height=350, margin=dict(l=0, r=0, t=10, b=0), 
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(color="#475569")), 
@@ -238,4 +231,4 @@ if run:
             table_html_s += '</table>'
             st.markdown(table_html_s, unsafe_allow_html=True)
 
-        st.markdown(f"<p style='text-align: right; color: #94A3B8 !important; font-size: 11px; margin-top: 30px;'>Data source: Yahoo Finance &middot; Generated: {date.today().strftime('%d %b %Y')}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: right; color: #94A3B8; font-size: 11px; margin-top: 30px;'>Data source: Yahoo Finance &middot; Generated: {date.today().strftime('%d %b %Y')}</p>", unsafe_allow_html=True)
