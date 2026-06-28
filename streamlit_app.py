@@ -13,31 +13,20 @@ st.set_page_config(page_title="Forecast Saham Bank", layout="wide", initial_side
 # ── CSS Kustom untuk Tampilan Profesional ────────────────
 st.markdown("""
 <style>
-    /* Styling Sidebar */
     .sidebar-section { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; margin-top: 1.5rem; margin-bottom: 0.5rem; text-transform: uppercase; }
-    
-    /* Tombol Utama Sidebar */
     div.stButton > button:first-child { background-color: #0f4a8a; color: white; border-radius: 6px; font-weight: 600; border: none; padding: 0.5rem 1rem; }
     div.stButton > button:first-child:hover { background-color: #0c396b; color: white; }
-    
-    /* Header Utama */
     .main-title { font-size: 28px; font-weight: 700; color: #0f4a8a; margin-bottom: 0px; padding-bottom: 0px; }
     .sub-title { font-size: 14px; color: #64748b; margin-bottom: 1.5rem; }
     .section-title { font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; margin-top: 2rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;}
-    
-    /* Kartu Metrik (Top Row) */
     .metric-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .metric-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
     .metric-value { font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 4px; }
     .metric-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
-    
-    /* Kartu Sinyal H+1 */
     .signal-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }
     .badge-buy { background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block; }
     .badge-sell { background-color: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block; }
     .badge-hold { background-color: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block; }
-    
-    /* Footer */
     .footer-text { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
@@ -62,12 +51,14 @@ with st.sidebar:
     selected_name = st.selectbox("Pilih Saham", list(STOCKS.keys()), label_visibility="collapsed")
     ticker = STOCKS[selected_name]
     ipo_date = IPO_DATES[ticker]
-    st.info(f"IPO Date: {ipo_date.strftime('%d %b %Y')}")
     
     st.markdown("<div class='sidebar-section'>DATE RANGE</div>", unsafe_allow_html=True)
+    # Default diset ke 3 tahun lalu (atau IPO jika data IPO lebih baru)
+    default_start = max(ipo_date, date.today() - datetime.timedelta(days=365*3))
+    
     start_date = st.date_input(
         "Tanggal Mulai",
-        value=ipo_date,
+        value=default_start,
         min_value=ipo_date,
         max_value=date.today(),
         label_visibility="collapsed"
@@ -100,7 +91,6 @@ def run_prophet(series_df, periods):
     return forecast.tail(periods)
 
 def run_sarima(series, periods, last_date):
-    # Disederhanakan untuk stabilitas visualisasi
     sarima = SARIMAX(series, order=(1, 1, 1), seasonal_order=(0, 0, 0, 0))
     sarima_fit = sarima.fit(disp=False)
     sarima_fc = sarima_fit.forecast(steps=periods)
@@ -113,7 +103,7 @@ if run:
         # 1. Ambil Data
         df_raw = yf.download(ticker, start=str(start_date), end=str(date.today()), auto_adjust=True)
         if df_raw.empty:
-            st.error("Data tidak ditemukan. Coba ticker lain.")
+            st.error("Data tidak ditemukan. Coba ticker atau rentang tanggal lain.")
             st.stop()
 
         df_raw.columns = [col[0] if isinstance(col, tuple) else col for col in df_raw.columns]
@@ -130,7 +120,7 @@ if run:
         st.markdown(f"<div class='main-title'>Forecasting Harga Saham Bank Indonesia</div>", unsafe_allow_html=True)
         st.markdown(f"<div class='sub-title'>Model: {model_choice} • Horizon: {forecast_days} hari • Saham: {selected_name}</div>", unsafe_allow_html=True)
 
-        # 3. Baris Metrik Atas (HTML Kustom)
+        # 3. Baris Metrik Atas 
         c1, c2, c3, c4, c5 = st.columns(5)
         metrics = [
             (c1, "SAHAM", selected_name.split(' (')[0], f"({ticker})"),
@@ -149,65 +139,73 @@ if run:
             </div>
             """, unsafe_allow_html=True)
 
-        # Siapkan data untuk model
-        df = df_raw[["Date", "Close"]].dropna().copy()
-        df.columns = ["ds", "y"]
-        df["ds"] = pd.to_datetime(df["ds"])
+        # Siapkan data untuk model (Open & Close)
+        df_close = df_raw[["Date", "Close"]].dropna().rename(columns={"Date": "ds", "Close": "y"})
+        df_open = df_raw[["Date", "Open"]].dropna().rename(columns={"Date": "ds", "Open": "y"})
+        df_close["ds"] = pd.to_datetime(df_close["ds"])
+        df_open["ds"] = pd.to_datetime(df_open["ds"])
 
         # Jalankan Model
-        fc_prophet, sarima_fc, future_dates_sarima = None, None, None
+        fc_prophet_close, fc_prophet_open = None, None
+        sarima_fc_close, sarima_fc_open, future_dates_sarima = None, None, None
+        
         if model_choice in ["Prophet", "Keduanya"]:
-            fc_prophet = run_prophet(df, forecast_days)
+            fc_prophet_close = run_prophet(df_close, forecast_days)
+            fc_prophet_open = run_prophet(df_open, forecast_days)
+            
         if model_choice in ["SARIMA", "Keduanya"]:
-            future_dates_sarima, sarima_fc = run_sarima(df["y"], forecast_days, df["ds"].iloc[-1])
+            future_dates_sarima, sarima_fc_close = run_sarima(df_close["y"], forecast_days, df_close["ds"].iloc[-1])
+            _, sarima_fc_open = run_sarima(df_open["y"], forecast_days, df_open["ds"].iloc[-1])
 
         # 4. Trading Signal (H+1)
         st.markdown("<div class='section-title'>TRADING SIGNAL (H+1)</div>", unsafe_allow_html=True)
         sig_c1, sig_c2, sig_c3 = st.columns([1, 1, 2])
         
-        if fc_prophet is not None:
-            h1_val_p = fc_prophet["yhat"].iloc[0]
+        if fc_prophet_close is not None:
+            h1_val_p = fc_prophet_close["yhat"].iloc[0]
             sig_text_p, badge_class_p, pct_p = get_signal_info(h1_val_p, last_close)
             sig_c1.markdown(f"""
             <div class='signal-card'>
                 <div class='metric-label' style='margin-bottom:8px;'>PROPHET — SIGNAL</div>
                 <div class='{badge_class_p}'>{sig_text_p}</div>
-                <div class='metric-sub' style='margin-top:8px;'>Forecast H+1: Rp {h1_val_p:,.0f} ({"+" if pct_p>0 else ""}{pct_p:.2f}%)</div>
+                <div class='metric-sub' style='margin-top:8px;'>Forecast Close H+1: Rp {h1_val_p:,.0f} ({"+" if pct_p>0 else ""}{pct_p:.2f}%)</div>
             </div>
             """, unsafe_allow_html=True)
 
-        if sarima_fc is not None:
-            h1_val_s = sarima_fc.iloc[0]
+        if sarima_fc_close is not None:
+            h1_val_s = sarima_fc_close.iloc[0]
             sig_text_s, badge_class_s, pct_s = get_signal_info(h1_val_s, last_close)
             sig_c2.markdown(f"""
             <div class='signal-card'>
                 <div class='metric-label' style='margin-bottom:8px;'>SARIMA — SIGNAL</div>
                 <div class='{badge_class_s}'>{sig_text_s}</div>
-                <div class='metric-sub' style='margin-top:8px;'>Forecast H+1: Rp {h1_val_s:,.0f} ({"+" if pct_s>0 else ""}{pct_s:.2f}%)</div>
+                <div class='metric-sub' style='margin-top:8px;'>Forecast Close H+1: Rp {h1_val_s:,.0f} ({"+" if pct_s>0 else ""}{pct_s:.2f}%)</div>
             </div>
             """, unsafe_allow_html=True)
             
         st.warning("⚠️ **Disclaimer:** Sinyal buy/sell dihasilkan dari perbandingan forecast Close H+1 vs harga Close terakhir (threshold ±1%). Bukan rekomendasi investasi.")
 
-        # 5. Chart
+        # 5. Chart (Sesuai tanggal yang dipilih)
         st.markdown("<div class='section-title'>PRICE CHART & FORECAST</div>", unsafe_allow_html=True)
         fig = go.Figure()
         
-        # Plot Histori (Batasi 6 bulan terakhir agar chart terlihat rapi)
-        df_plot = df.tail(150) 
-        fig.add_trace(go.Scatter(x=df_plot["ds"], y=df_plot["y"], name="Historical Close", line=dict(color="#1e3a8a", width=2)))
+        # Plot Histori Close & Open
+        fig.add_trace(go.Scatter(x=df_close["ds"], y=df_close["y"], name="Historical Close", line=dict(color="#1e3a8a", width=2)))
+        fig.add_trace(go.Scatter(x=df_open["ds"], y=df_open["y"], name="Historical Open", line=dict(color="#94a3b8", dash="dot", width=1.5)))
 
-        if fc_prophet is not None:
-            fig.add_trace(go.Scatter(x=fc_prophet["ds"], y=fc_prophet["yhat"], name="Forecast Close (Prophet)", line=dict(color="#10b981", dash="dash", width=2.5)))
+        # Plot Forecast Prophet
+        if fc_prophet_close is not None:
+            fig.add_trace(go.Scatter(x=fc_prophet_close["ds"], y=fc_prophet_close["yhat"], name="Forecast Close (Prophet)", line=dict(color="#10b981", dash="dash", width=2.5)))
             fig.add_trace(go.Scatter(
-                x=pd.concat([fc_prophet["ds"], fc_prophet["ds"][::-1]]),
-                y=pd.concat([fc_prophet["yhat_upper"], fc_prophet["yhat_lower"][::-1]]),
+                x=pd.concat([fc_prophet_close["ds"], fc_prophet_close["ds"][::-1]]),
+                y=pd.concat([fc_prophet_close["yhat_upper"], fc_prophet_close["yhat_lower"][::-1]]),
                 fill="toself", fillcolor="rgba(16,185,129,0.15)", line=dict(color="rgba(255,255,255,0)"),
                 name="Confidence Prophet", showlegend=False
             ))
-
-        if sarima_fc is not None:
-            fig.add_trace(go.Scatter(x=future_dates_sarima, y=sarima_fc, name="Forecast Close (SARIMA)", line=dict(color="#f59e0b", dash="dash", width=2.5)))
+            
+        # Plot Forecast SARIMA
+        if sarima_fc_close is not None:
+            fig.add_trace(go.Scatter(x=future_dates_sarima, y=sarima_fc_close, name="Forecast Close (SARIMA)", line=dict(color="#f59e0b", dash="dash", width=2.5)))
 
         fig.update_layout(
             template="plotly_white",
@@ -222,32 +220,48 @@ if run:
         # 6. Tabel Hasil
         st.markdown("<div class='section-title'>FORECAST TABLE</div>", unsafe_allow_html=True)
         
-        if fc_prophet is not None:
+        if fc_prophet_close is not None:
             st.markdown("**PROPHET**")
-            tbl = fc_prophet[["ds", "yhat", "yhat_lower"]].copy()
-            tbl.columns = ["TANGGAL", "FORECAST CLOSE", "BATAS BAWAH"]
-            tbl["TANGGAL"] = tbl["TANGGAL"].dt.strftime("%Y-%m-%d")
             
-            # Tambahkan sinyal untuk setiap hari berdasarkan hari sebelumnya
+            # Gabungkan prediksi Open dan Close ke dalam satu dataframe
+            tbl = pd.DataFrame({
+                "TANGGAL": fc_prophet_close["ds"].dt.strftime("%Y-%m-%d"),
+                "FORECAST OPEN": fc_prophet_open["yhat"].values,
+                "FORECAST CLOSE": fc_prophet_close["yhat"].values,
+                "BATAS BAWAH": fc_prophet_close["yhat_lower"].values
+            })
+            
+            # Tambahkan sinyal untuk setiap hari berdasarkan hari sebelumnya (menggunakan Close)
             signals = []
             prev_val = last_close
             for val in tbl["FORECAST CLOSE"]:
                 sig, _, _ = get_signal_info(val, prev_val)
                 signals.append(sig)
-                prev_val = val # update untuk iterasi selanjutnya
+                prev_val = val
                 
             tbl["SIGNAL"] = signals
-            for col in ["FORECAST CLOSE", "BATAS BAWAH"]:
+            
+            for col in ["FORECAST OPEN", "FORECAST CLOSE", "BATAS BAWAH"]:
                 tbl[col] = tbl[col].apply(lambda x: f"Rp {x:,.0f}")
                 
             st.dataframe(tbl, use_container_width=True, hide_index=True)
 
-        if sarima_fc is not None:
+        if sarima_fc_close is not None:
             st.markdown("**SARIMA**")
             tbl_s = pd.DataFrame({
                 "TANGGAL": [d.strftime("%Y-%m-%d") for d in future_dates_sarima],
-                "FORECAST CLOSE": [f"Rp {v:,.0f}" for v in sarima_fc]
+                "FORECAST OPEN": [f"Rp {v:,.0f}" for v in sarima_fc_open],
+                "FORECAST CLOSE": [f"Rp {v:,.0f}" for v in sarima_fc_close]
             })
+            
+            signals_s = []
+            prev_val_s = last_close
+            for val in sarima_fc_close:
+                sig, _, _ = get_signal_info(val, prev_val_s)
+                signals_s.append(sig)
+                prev_val_s = val
+                
+            tbl_s["SIGNAL"] = signals_s
             st.dataframe(tbl_s, use_container_width=True, hide_index=True)
 
         # Footer
