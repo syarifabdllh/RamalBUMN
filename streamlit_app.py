@@ -13,39 +13,6 @@ warnings.filterwarnings("ignore")
 # ── Config ──────────────────────────────────────────────
 st.set_page_config(page_title="Stock Forecast", layout="wide")
 
-# CSS Kustom (Hanya untuk mewarnai Tombol, Tabel, dan Card. Tidak merusak Input Box)
-st.markdown("""<style>
-#MainMenu {visibility: hidden;} footer {visibility: hidden;}
-
-/* Typografi Judul */
-.main-title { color: #0F172A; font-size: 28px; font-weight: 700; margin-bottom: 0px; }
-.sub-title { color: #64748B; font-size: 14px; margin-bottom: 20px; }
-.section-title { font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 1px; margin-top: 35px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #E2E8F0; padding-bottom: 5px;}
-
-/* Custom Tombol Biru Elegan */
-.stButton>button { background-color: #10437A !important; color: white !important; border-radius: 6px !important; padding: 15px !important; font-weight: 600 !important; border: none !important; }
-.stButton>button:hover { background-color: #0c335d !important; color: white !important; }
-
-/* Desain Card & Tabel Kustom (Dipaksa Putih & Tulisan Gelap agar selalu mirip Mockup) */
-.kpi-container { display: flex; gap: 15px; margin-bottom: 25px; margin-top: 10px; }
-.kpi-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.kpi-title { font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
-.kpi-value { font-size: 22px; font-weight: 800; color: #0F172A; }
-.kpi-sub { font-size: 12px; color: #64748B; margin-top: 4px; }
-
-.signal-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; width: 32%; display: inline-block; margin-right: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.badge { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 700; font-size: 14px; margin-top: 5px; margin-bottom: 10px; }
-.badge-buy { background-color: #D1FAE5; color: #059669; border: 1px solid #A7F3D0; }
-.badge-sell { background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
-.badge-hold { background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
-
-.custom-table { width: 100%; border-collapse: collapse; background-color: #FFFFFF; font-size: 13px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0;}
-.custom-table th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-align: left; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; }
-.custom-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #1E293B; }
-
-.disclaimer { background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #B45309; margin-bottom: 25px; margin-top: 15px; }
-</style>""", unsafe_allow_html=True)
-
 # ── Data Presets ──────────────────────────────────────────────
 STOCKS = {
     "Bank BCA (BBCA)": "BBCA.JK",
@@ -69,14 +36,8 @@ def get_data(ticker, start, end):
         df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
     return df
 
-def get_signal_badge(current_price, h1_price):
-    pct_change = ((h1_price - current_price) / current_price) * 100
-    if pct_change >= 1.0: return "▲ BUY", "badge-buy", pct_change
-    elif pct_change <= -1.0: return "▼ SELL", "badge-sell", pct_change
-    else: return "— HOLD", "badge-hold", pct_change
-
 def run_fast_prophet(series_df, periods):
-    df_train = series_df.tail(300).copy()
+    df_train = series_df.tail(300).copy() # Batasi 300 hari agar eksekusi instan
     m = Prophet(daily_seasonality=False, yearly_seasonality=False, weekly_seasonality=False) 
     m.fit(df_train)
     future = m.make_future_dataframe(periods=periods, freq="B")
@@ -89,34 +50,45 @@ def run_fast_sarima(series, periods, last_date):
     dates = pd.bdate_range(start=last_date, periods=periods + 1)[1:]
     return dates, fc
 
-# ── Tampilan Utama ─────────────────────────────────────────
-st.markdown("<div class='main-title'>Forecasting Harga Saham Bank Indonesia</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Dashboard analisis prediktif pergerakan harga saham menggunakan metode runtun waktu.</div>", unsafe_allow_html=True)
+def generate_signal(current_price, target_price):
+    pct = ((target_price - current_price) / current_price) * 100
+    if pct >= 1.0:
+        return "BUY", pct
+    elif pct <= -1.0:
+        return "SELL", pct
+    else:
+        return "HOLD", pct
 
-# MENGGUNAKAN NATIVE CONTAINER STREAMLIT AGAR INPUTAN RAPI & TIDAK ERROR
+def style_signal_dataframe(val):
+    if val == 'BUY': return 'color: #10B981; font-weight: bold;'
+    if val == 'SELL': return 'color: #EF4444; font-weight: bold;'
+    return 'color: #F59E0B; font-weight: bold;'
+
+# ── Tampilan Utama (Header) ─────────────────────────────────────────
+st.title("📈 Forecasting Harga Saham Bank Indonesia")
+st.caption("Dashboard analisis prediktif pergerakan harga saham menggunakan metode runtun waktu (Time-Series).")
+
+# ── Form Input (Menggunakan Native Container) ──
 with st.container(border=True):
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         selected_name = st.selectbox("Instrumen Saham", list(STOCKS.keys()))
         ticker = STOCKS[selected_name]
     with col2:
-        start_date = st.date_input("Tanggal Mulai", value=IPO_DATES[ticker], min_value=IPO_DATES[ticker], max_value=date.today())
+        start_date = st.date_input("Tanggal Mulai Data", value=IPO_DATES[ticker], min_value=IPO_DATES[ticker], max_value=date.today())
     with col3:
         forecast_days = st.number_input("Horizon Forecast (Hari)", min_value=7, max_value=90, value=30)
     with col4:
-        model_choice = st.selectbox("Algoritma", ["Prophet", "SARIMA", "Keduanya"])
+        model_choice = st.selectbox("Pilih Algoritma", ["Prophet", "SARIMA", "Keduanya"])
 
-    # Tombol Biru 
-    run = st.button("🚀 Jalankan Forecast", use_container_width=True)
-
-st.markdown("<hr style='border: 1px solid #E2E8F0; margin-top: 15px;'>", unsafe_allow_html=True)
+    run = st.button("🚀 Jalankan Forecast", type="primary", use_container_width=True)
 
 # ── PROSES & HASIL ──
 if run:
-    with st.spinner("Mengambil data & menghitung algoritma..."):
+    with st.spinner("Memproses data & menjalankan algoritma..."):
         df_raw = get_data(ticker, start_date, date.today())
         if df_raw is None or df_raw.empty:
-            st.error("Gagal mengambil data. Coba lagi.")
+            st.error("Gagal mengambil data. Periksa koneksi atau coba lagi.")
             st.stop()
 
         last_close = df_raw["Close"].iloc[-1]
@@ -130,105 +102,136 @@ if run:
             fc_close_prophet = run_fast_prophet(df_close, forecast_days)
             fc_open_prophet = run_fast_prophet(df_open, forecast_days)
             h1_prophet = fc_close_prophet["yhat"].iloc[0]
-            badge_text_p, badge_class_p, pct_p = get_signal_badge(last_close, h1_prophet)
+            sig_p_text, sig_p_pct = generate_signal(last_close, h1_prophet)
             
         if model_choice in ["SARIMA", "Keduanya"]:
             dates_s, fc_close_sarima = run_fast_sarima(df_close["y"], forecast_days, df_close["ds"].iloc[-1])
             _, fc_open_sarima = run_fast_sarima(df_open["y"], forecast_days, df_open["ds"].iloc[-1])
             h1_sarima = fc_close_sarima.iloc[0]
-            badge_text_s, badge_class_s, pct_s = get_signal_badge(last_close, h1_sarima)
+            sig_s_text, sig_s_pct = generate_signal(last_close, h1_sarima)
 
-        # ── 1. KPI Cards ──
-        kpi_html = (
-            '<div class="kpi-container">'
-            '<div class="kpi-card"><div class="kpi-title">SAHAM</div><div class="kpi-value">' + selected_name.split('(')[0].strip() + '</div><div class="kpi-sub">(' + ticker + ')</div></div>'
-            '<div class="kpi-card"><div class="kpi-title">LAST CLOSE PRICE</div><div class="kpi-value">Rp ' + f"{last_close:,.0f}" + '</div></div>'
-            '<div class="kpi-card"><div class="kpi-title">LAST OPEN PRICE</div><div class="kpi-value">Rp ' + f"{last_open:,.0f}" + '</div></div>'
-            '<div class="kpi-card"><div class="kpi-title">DATA POINTS</div><div class="kpi-value">' + f"{len(df_raw):,}" + '</div><div class="kpi-sub">hari perdagangan</div></div>'
-            '<div class="kpi-card"><div class="kpi-title">FORECAST HORIZON</div><div class="kpi-value">' + str(forecast_days) + ' hari</div><div class="kpi-sub">ke depan</div></div>'
-            '</div>'
-        )
-        st.markdown(kpi_html, unsafe_allow_html=True)
+        st.divider()
 
-        # ── 2. Trading Signal ──
-        st.markdown("<div class='section-title'>📋 RANGKUMAN TRADING SIGNAL (H+1)</div>", unsafe_allow_html=True)
-        signals_html = '<div>'
+        # ── 1. KPI Cards (Native st.metric) ──
+        st.subheader("Informasi Market Terakhir")
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        kpi1.metric("Ticker Saham", ticker)
+        kpi2.metric("Last Close Price", f"Rp {last_close:,.0f}")
+        kpi3.metric("Last Open Price", f"Rp {last_open:,.0f}")
+        kpi4.metric("Jumlah Data Historis", f"{len(df_raw):,} Hari")
+        
+        st.divider()
+
+        # ── 2. Rangkuman Trading Signal ──
+        st.subheader("💡 Rangkuman Sinyal Harian (H+1)")
+        sig1, sig2, sig3 = st.columns(3)
+        
         if model_choice in ["Prophet", "Keduanya"]:
-            signals_html += '<div class="signal-card"><div class="kpi-title">PROPHET — SIGNAL</div><div class="badge ' + badge_class_p + '">' + badge_text_p + '</div><div class="kpi-sub">Forecast H+1: Rp ' + f"{h1_prophet:,.0f} ({pct_p:+.2f}%)" + '</div></div>'
+            with sig1:
+                st.metric(
+                    label="PROPHET SIGNAL", 
+                    value=sig_p_text, 
+                    delta=f"{sig_p_pct:+.2f}% (Target: Rp {h1_prophet:,.0f})",
+                    delta_color="off" if sig_p_text == "HOLD" else "normal"
+                )
+                
         if model_choice in ["SARIMA", "Keduanya"]:
-            signals_html += '<div class="signal-card"><div class="kpi-title">SARIMA — SIGNAL</div><div class="badge ' + badge_class_s + '">' + badge_text_s + '</div><div class="kpi-sub">Forecast H+1: Rp ' + f"{h1_sarima:,.0f} ({pct_s:+.2f}%)" + '</div></div>'
-        signals_html += '</div>'
-        st.markdown(signals_html, unsafe_allow_html=True)
-        st.markdown('<div class="disclaimer">⚠️ <b>Disclaimer:</b> Sinyal buy/sell dihasilkan dari perbandingan forecast Close H+1 vs harga Close terakhir (threshold ±1%). Bukan rekomendasi investasi.</div>', unsafe_allow_html=True)
+            with sig2:
+                st.metric(
+                    label="SARIMA SIGNAL", 
+                    value=sig_s_text, 
+                    delta=f"{sig_s_pct:+.2f}% (Target: Rp {h1_sarima:,.0f})",
+                    delta_color="off" if sig_s_text == "HOLD" else "normal"
+                )
 
+        st.info("⚠️ **Disclaimer:** Sinyal BUY/SELL/HOLD ditarik otomatis berdasar proyeksi H+1 vs Harga Penutupan Terakhir (Toleransi ±1%). Bukan rekomendasi investasi absolut.")
+        st.divider()
+
+        # Data Potongan untuk visual Chart agar rapi
         plot_df = df_raw.tail(150)
 
         # =====================================================================
         # ── BAGIAN PROPHET ──
         # =====================================================================
         if model_choice in ["Prophet", "Keduanya"]:
-            st.markdown("<div class='section-title' style='color:#059669; border-bottom-color:#34D399;'>📈 HASIL FORECAST — MODEL PROPHET</div>", unsafe_allow_html=True)
+            st.subheader("📉 Hasil Forecast — Model PROPHET")
             
             fig_p = go.Figure()
-            fig_p.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Close"], name="Historical Close", line=dict(color="#1E3A8A", width=2)))
-            fig_p.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Open"], name="Historical Open", line=dict(color="#94A3B8", width=1.5, dash="dash")))
-            fig_p.add_trace(go.Scatter(x=fc_close_prophet["ds"], y=fc_close_prophet["yhat"], name="Forecast Close (Prophet)", line=dict(color="#10B981", width=2.5, dash="dash")))
+            fig_p.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Close"], name="Historical Close", line=dict(color="#3B82F6", width=2)))
+            fig_p.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Open"], name="Historical Open", line=dict(color="#9CA3AF", width=1.5, dash="dash")))
+            fig_p.add_trace(go.Scatter(x=fc_close_prophet["ds"], y=fc_close_prophet["yhat"], name="Forecast Prophet", line=dict(color="#10B981", width=2.5, dash="dash")))
             fig_p.add_trace(go.Scatter(
                 x=pd.concat([fc_close_prophet["ds"], fc_close_prophet["ds"][::-1]]),
                 y=pd.concat([fc_close_prophet["yhat_upper"], fc_close_prophet["yhat_lower"][::-1]]),
                 fill="toself", fillcolor="rgba(16, 185, 129, 0.15)", line=dict(color="rgba(255,255,255,0)"),
-                showlegend=False, name="Confidence Prophet"
+                showlegend=False, name="Confidence"
             ))
             
-            fig_p.update_layout(
-                paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", height=350, margin=dict(l=0, r=0, t=10, b=0), 
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(color="#475569")), 
-                yaxis=dict(gridcolor="#E2E8F0", tickfont=dict(color="#475569")), 
-                xaxis=dict(showgrid=False, tickfont=dict(color="#475569"))
-            )
-            st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False}, theme=None)
+            # Membiarkan layout menyesuaikan tema browser user secara native
+            fig_p.update_layout(margin=dict(l=0, r=0, t=10, b=0), legend=dict(orientation="h", yanchor="bottom", y=1.02), xaxis=dict(showgrid=False))
+            st.plotly_chart(fig_p, use_container_width=True, theme="streamlit")
 
-            table_html_p = '<table class="custom-table"><tr><th>TANGGAL</th><th>FORECAST OPEN</th><th>FORECAST CLOSE</th><th>BATAS BAWAH</th><th>SIGNAL</th></tr>'
-            for i in range(min(5, forecast_days)): 
-                tgl = fc_close_prophet.iloc[i]["ds"].strftime("%Y-%m-%d")
-                f_open = fc_open_prophet.iloc[i]["yhat"]
-                f_close = fc_close_prophet.iloc[i]["yhat"]
-                b_bawah = fc_close_prophet.iloc[i]["yhat_lower"]
-                prev_price = last_close if i == 0 else fc_close_prophet.iloc[i-1]["yhat"]
-                badge_txt, badge_cls, _ = get_signal_badge(prev_price, f_close)
-                table_html_p += '<tr><td>' + tgl + '</td><td>Rp ' + f"{f_open:,.0f}" + '</td><td>Rp ' + f"{f_close:,.0f}" + '</td><td>Rp ' + f"{b_bawah:,.0f}" + '</td><td><span class="badge ' + badge_cls + '" style="margin:0; padding:2px 8px; font-size:12px;">' + badge_txt + '</span></td></tr>'
-            table_html_p += '</table>'
-            st.markdown(table_html_p, unsafe_allow_html=True)
-            if model_choice == "Keduanya": st.markdown("<br>", unsafe_allow_html=True)
+            # Native Pandas Dataframe 
+            st.markdown("**Tabel Data Forecast (Prophet):**")
+            df_p_table = pd.DataFrame({
+                "Tanggal": fc_close_prophet["ds"].dt.strftime("%Y-%m-%d"),
+                "Forecast Open": fc_open_prophet["yhat"].values,
+                "Forecast Close": fc_close_prophet["yhat"].values,
+                "Batas Bawah": fc_close_prophet["yhat_lower"].values
+            })
+            
+            # Hitung signal harian untuk tabel
+            sig_list = []
+            for i in range(len(df_p_table)):
+                prev = last_close if i == 0 else df_p_table["Forecast Close"].iloc[i-1]
+                stxt, _ = generate_signal(prev, df_p_table["Forecast Close"].iloc[i])
+                sig_list.append(stxt)
+            df_p_table["Sinyal"] = sig_list
+            
+            # Style & Format Dataframe
+            styled_p = df_p_table.style.format({
+                "Forecast Open": "Rp {:,.0f}",
+                "Forecast Close": "Rp {:,.0f}",
+                "Batas Bawah": "Rp {:,.0f}"
+            }).applymap(style_signal_dataframe, subset=['Sinyal'])
+            
+            st.dataframe(styled_p, use_container_width=True, hide_index=True)
+            
+            if model_choice == "Keduanya": st.divider()
 
         # =====================================================================
         # ── BAGIAN SARIMA ──
         # =====================================================================
         if model_choice in ["SARIMA", "Keduanya"]:
-            st.markdown("<div class='section-title' style='color:#DC2626; border-bottom-color:#F87171;'>📈 HASIL FORECAST — MODEL SARIMA</div>", unsafe_allow_html=True)
+            st.subheader("📉 Hasil Forecast — Model SARIMA")
             
             fig_s = go.Figure()
-            fig_s.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Close"], name="Historical Close", line=dict(color="#1E3A8A", width=2)))
-            fig_s.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Open"], name="Historical Open", line=dict(color="#94A3B8", width=1.5, dash="dash")))
-            fig_s.add_trace(go.Scatter(x=dates_s, y=fc_close_sarima, name="Forecast Close (SARIMA)", line=dict(color="#EF4444", width=2.5, dash="dash")))
+            fig_s.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Close"], name="Historical Close", line=dict(color="#3B82F6", width=2)))
+            fig_s.add_trace(go.Scatter(x=plot_df["Date"], y=plot_df["Open"], name="Historical Open", line=dict(color="#9CA3AF", width=1.5, dash="dash")))
+            fig_s.add_trace(go.Scatter(x=dates_s, y=fc_close_sarima, name="Forecast SARIMA", line=dict(color="#EF4444", width=2.5, dash="dash")))
             
-            fig_s.update_layout(
-                paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", height=350, margin=dict(l=0, r=0, t=10, b=0), 
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(color="#475569")), 
-                yaxis=dict(gridcolor="#E2E8F0", tickfont=dict(color="#475569")), 
-                xaxis=dict(showgrid=False, tickfont=dict(color="#475569"))
-            )
-            st.plotly_chart(fig_s, use_container_width=True, config={'displayModeBar': False}, theme=None)
+            fig_s.update_layout(margin=dict(l=0, r=0, t=10, b=0), legend=dict(orientation="h", yanchor="bottom", y=1.02), xaxis=dict(showgrid=False))
+            st.plotly_chart(fig_s, use_container_width=True, theme="streamlit")
 
-            table_html_s = '<table class="custom-table"><tr><th>TANGGAL</th><th>FORECAST OPEN</th><th>FORECAST CLOSE</th><th>SIGNAL</th></tr>'
-            for i in range(min(5, forecast_days)): 
-                tgl = dates_s[i].strftime("%Y-%m-%d")
-                f_open = fc_open_sarima.iloc[i]
-                f_close = fc_close_sarima.iloc[i]
-                prev_price = last_close if i == 0 else fc_close_sarima.iloc[i-1]
-                badge_txt, badge_cls, _ = get_signal_badge(prev_price, f_close)
-                table_html_s += '<tr><td>' + tgl + '</td><td>Rp ' + f"{f_open:,.0f}" + '</td><td>Rp ' + f"{f_close:,.0f}" + '</td><td><span class="badge ' + badge_cls + '" style="margin:0; padding:2px 8px; font-size:12px;">' + badge_txt + '</span></td></tr>'
-            table_html_s += '</table>'
-            st.markdown(table_html_s, unsafe_allow_html=True)
-
-        st.markdown(f"<p style='text-align: right; color: #94A3B8; font-size: 11px; margin-top: 30px;'>Data source: Yahoo Finance &middot; Generated: {date.today().strftime('%d %b %Y')}</p>", unsafe_allow_html=True)
+            # Native Pandas Dataframe
+            st.markdown("**Tabel Data Forecast (SARIMA):**")
+            df_s_table = pd.DataFrame({
+                "Tanggal": dates_s.strftime("%Y-%m-%d"),
+                "Forecast Open": fc_open_sarima.values,
+                "Forecast Close": fc_close_sarima.values
+            })
+            
+            # Hitung signal harian untuk tabel
+            sig_list_s = []
+            for i in range(len(df_s_table)):
+                prev = last_close if i == 0 else df_s_table["Forecast Close"].iloc[i-1]
+                stxt, _ = generate_signal(prev, df_s_table["Forecast Close"].iloc[i])
+                sig_list_s.append(stxt)
+            df_s_table["Sinyal"] = sig_list_s
+            
+            styled_s = df_s_table.style.format({
+                "Forecast Open": "Rp {:,.0f}",
+                "Forecast Close": "Rp {:,.0f}"
+            }).applymap(style_signal_dataframe, subset=['Sinyal'])
+            
+            st.dataframe(styled_s, use_container_width=True, hide_index=True)
