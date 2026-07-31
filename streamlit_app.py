@@ -28,19 +28,23 @@ st.markdown("""
         border-right: 1px solid #1F2937 !important;
     }
     
-    /* Modern Clean Font */
-    html, body, p, div, span:not(.material-symbols-rounded):not(.material-icons), h1, h2, h3, h4, h5, h6, table, th, td {
+    /* Modern Clean Font — kecualikan SEMUA elemen ikon material */
+    html, body,
+    p:not([data-testid="stIconMaterial"]),
+    div:not([data-testid="stIconMaterial"]),
+    span:not([data-testid="stIconMaterial"]),
+    h1, h2, h3, h4, h5, h6, table, th, td {
         font-family: 'Inter', 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif !important;
     }
 
-    /* FIX BUG: Kembalikan font khusus untuk ikon Streamlit (termasuk tombol collapse sidebar) */
+    /* FIX BUG: paksa font Material untuk SEMUA elemen ikon, termasuk tombol collapse sidebar */
     [data-testid="stIconMaterial"],
-    .material-symbols-rounded,
-    .material-icons {
-        font-family: 'Material Symbols Rounded', 'Material Icons' !important;
-        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
+    [data-testid="collapsedControl"] *,
+    [data-testid="stSidebarCollapseButton"] * {
+        font-family: 'Material Symbols Rounded' !important;
         -webkit-font-feature-settings: 'liga' !important;
         font-feature-settings: 'liga' !important;
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
     }
 
     /* Titles & Sections */
