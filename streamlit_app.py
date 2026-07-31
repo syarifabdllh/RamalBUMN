@@ -13,6 +13,8 @@ st.set_page_config(page_title="Pro Forecast Terminal", layout="wide", initial_si
 # ── CSS Kustom: Modern Dark Financial Dashboard ─────────
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
     /* Force Deep Dark Background */
     [data-testid="stAppViewContainer"] {
         background-color: #0B0E14 !important;
@@ -31,9 +33,14 @@ st.markdown("""
         font-family: 'Inter', 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif !important;
     }
 
-    /* FIX BUG: Kembalikan font khusus untuk ikon Streamlit */
-    .material-symbols-rounded, .material-icons {
+    /* FIX BUG: Kembalikan font khusus untuk ikon Streamlit (termasuk tombol collapse sidebar) */
+    [data-testid="stIconMaterial"],
+    .material-symbols-rounded,
+    .material-icons {
         font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
+        -webkit-font-feature-settings: 'liga' !important;
+        font-feature-settings: 'liga' !important;
     }
 
     /* Titles & Sections */
