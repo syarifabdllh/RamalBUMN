@@ -27,8 +27,13 @@ st.markdown("""
     }
     
     /* Modern Clean Font */
-    html, body, p, div, span, h1, h2, h3, h4, h5, h6, table, th, td {
+    html, body, p, div, span:not(.material-symbols-rounded):not(.material-icons), h1, h2, h3, h4, h5, h6, table, th, td {
         font-family: 'Inter', 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif !important;
+    }
+
+    /* FIX BUG: Kembalikan font khusus untuk ikon Streamlit */
+    .material-symbols-rounded, .material-icons {
+        font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     }
 
     /* Titles & Sections */
